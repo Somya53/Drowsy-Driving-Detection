@@ -1,0 +1,57 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define OLED_RESET 4 // reset pin for OLED
+Adafruit_SSD1306 display(OLED_RESET);
+
+const int sensorPin = A0; // KY-039 sensor connected to analog pin A0
+int heartRate; // current heart rate
+int threshold = 60; // initial threshold heart rate
+int correct = 0; // number of correct predictions
+int total = 0; // total number of predictions
+
+void setup() {
+  Serial.begin(9600); // initialize serial communication
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // initialize OLED display
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+}
+
+void loop() {
+  heartRate = analogRead(sensorPin); // read heart rate sensor
+  Serial.print("Heart rate: ");
+  Serial.println(heartRate);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Heart rate: ");
+  display.println(heartRate);
+  if (heartRate < threshold) {
+    display.println("You're drowsy");
+    Serial.println("You're drowsy");
+  } else {
+    display.println("You're not drowsy");
+    Serial.println("You're not drowsy");
+  }
+  display.display();
+  delay(1000); // wait 1 second before reading again
+  
+  // ask for user feedback
+  Serial.println("Was the prediction correct? (y/n)");
+  while (!Serial.available()); // wait for user input
+  char feedback = Serial.read();
+  if (feedback == 'y') {
+    correct++;
+  }
+  total++;
+  
+  // update threshold based on user feedback
+  if (total % 10 == 0) { // update threshold every 10 predictions
+    threshold += (correct * 2 - total) / 10; // reinforcement learning algorithm
+    correct = 0;
+    total = 0;
+    Serial.print("New threshold: ");
+    Serial.println(threshold);
+  }
+}
